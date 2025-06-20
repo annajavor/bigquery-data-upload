@@ -14,31 +14,33 @@ st.info(
 # --- CONSTANTS ---
 PROJECT_ID = "trimark-tdp"
 
-# --- INIT BIGQUERY CLIENT ---
 def init_bigquery_client():
     """Initialize BigQuery client with service account credentials"""
     try:
-        # Try to get credentials from Streamlit secrets (for deployment)
         if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
             credentials = service_account.Credentials.from_service_account_info(
                 st.secrets["gcp_service_account"]
             )
         else:
-            # For local development, use the JSON file
-            # Make sure to set GOOGLE_APPLICATION_CREDENTIALS environment variable
-            credentials = service_account.Credentials.from_service_account_file('/Users/trimark/Desktop/Jupyter_Notebooks/trimark-tdp-87c89fbd0816.json')
-        
+            credentials = service_account.Credentials.from_service_account_file(
+                '/Users/trimark/Desktop/Jupyter_Notebooks/trimark-tdp-87c89fbd0816.json'
+            )
         client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
         return client
     except Exception as e:
         st.error(f"Error initializing BigQuery client: {str(e)}")
         return None
 
+client = init_bigquery_client()
+
+if client is None:
+    st.stop()
+
 # --- TABLE OPTIONS ---
 tables = {
-    "All Paid Media": "trimark-tdp.master.allpaidmedia",
-    "Meta Ads": "trimark-tdp.meta.ads_data",
-    "Google Ads": "trimark-tdp.google.ads_data"
+    "All Paid Media": "trimark-tdp.master.all_paidmedia",
+    "All GA4": "trimark-tdp.master.all_ga4",
+    "All Leads": "trimark-tdp.master.all_leads"
 }
 
 selected_table = st.selectbox("Select a BigQuery Table", list(tables.keys()))
