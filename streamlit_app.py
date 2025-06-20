@@ -33,11 +33,6 @@ def init_bigquery_client():
         st.error(f"Error initializing BigQuery client: {str(e)}")
         return None
 
-client = init_bigquery_client()
-
-if client is None:
-    st.stop()
-
 # --- TABLE OPTIONS ---
 tables = {
     "All Paid Media": "trimark-tdp.master.all_paidmedia",
