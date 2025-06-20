@@ -22,7 +22,9 @@ def init_bigquery_client():
                 st.secrets["gcp_service_account"]
             )
         else:
-            credentials = service_account.Credentials.from_service_account_file('/Users/trimark/Desktop/Jupyter_Notebooks/trimark-tdp-87c89fbd0816.json')
+            credentials = service_account.Credentials.from_service_account_file(
+                '/Users/trimark/Desktop/Jupyter_Notebooks/trimark-tdp-87c89fbd0816.json'
+            )
         
         client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
         return client
@@ -45,6 +47,12 @@ selected_table = st.selectbox(
 )
 table_path = tables[selected_table]
 
+# Dynamically set client column based on selected table
+if selected_table == "All Leads":
+    client_col = "Client_Name"
+else:
+    client_col = "client_name"
+
 # Date inputs with keys
 start_date = st.date_input("Start Date", datetime(2024, 1, 1), key="start_date")
 end_date = st.date_input("End Date", datetime.today(), key="end_date")
@@ -54,11 +62,11 @@ client = init_bigquery_client()
 if client is None:
     st.stop()
 
-# Fetch clients for client selectbox
-client_query = f"SELECT DISTINCT client FROM `{table_path}` WHERE client IS NOT NULL"
+# Fetch clients for client selectbox using dynamic column name
+client_query = f"SELECT DISTINCT {client_col} FROM `{table_path}` WHERE {client_col} IS NOT NULL"
 try:
     clients_df = client.query(client_query).to_dataframe()
-    clients = sorted(clients_df["client"].dropna().unique())
+    clients = sorted(clients_df[client_col].dropna().unique())
     selected_client = st.selectbox(
         "Select a Client", 
         clients, 
@@ -75,7 +83,7 @@ if st.button("Run Query and Download"):
         query = f"""
             SELECT *
             FROM `{table_path}`
-            WHERE client = @client
+            WHERE {client_col} = @client
               AND DATE(date) BETWEEN @start_date AND @end_date
         """
         job_config = bigquery.QueryJobConfig(
