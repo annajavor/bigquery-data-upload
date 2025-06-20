@@ -16,25 +16,23 @@ PROJECT_ID = "trimark-tdp"
 
 # --- INIT BIGQUERY CLIENT ---
 def init_bigquery_client():
+    """Initialize BigQuery client with service account credentials"""
     try:
-        if "gcp_service_account" in st.secrets:
+        # Try to get credentials from Streamlit secrets (for deployment)
+        if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
             credentials = service_account.Credentials.from_service_account_info(
                 st.secrets["gcp_service_account"]
             )
         else:
-            credentials = service_account.Credentials.from_service_account_file(
-                '/Users/annajavor/Desktop/python_notebooks/research/skin_the_cat/trimark-tdp-87c89fbd0816.json'
-            )
+            # For local development, use the JSON file
+            # Make sure to set GOOGLE_APPLICATION_CREDENTIALS environment variable
+            credentials = service_account.Credentials.from_service_account_file('/Users/trimark/Desktop/Jupyter_Notebooks/trimark-tdp-87c89fbd0816.json')
+        
         client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
         return client
     except Exception as e:
         st.error(f"Error initializing BigQuery client: {str(e)}")
         return None
-
-client = init_bigquery_client()
-
-if client is None:
-    st.stop()
 
 # --- TABLE OPTIONS ---
 tables = {
