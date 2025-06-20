@@ -48,6 +48,21 @@ start_date = st.date_input("Start Date", datetime(2024, 1, 1))
 end_date = st.date_input("End Date", datetime.today())
 
 # --- CLIENT FILTERING ---
+tables = {
+    "All Paid Media": "trimark-tdp.master.all_paidmedia",
+    "All GA4": "trimark-tdp.master.all_ga4",
+    "All Leads": "trimark-tdp.master.all_leads"
+}
+
+selected_table = st.selectbox("Select a BigQuery Table", list(tables.keys()))
+table_path = tables[selected_table]
+
+# Initialize BigQuery client here
+client = init_bigquery_client()
+if client is None:
+    st.stop()
+
+# --- CLIENT FILTERING ---
 client_query = f"SELECT DISTINCT client FROM `{table_path}` WHERE client IS NOT NULL"
 try:
     clients_df = client.query(client_query).to_dataframe()
