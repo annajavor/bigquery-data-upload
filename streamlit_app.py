@@ -22,7 +22,6 @@ def init_bigquery_client():
                 st.secrets["gcp_service_account"]
             )
         else:
-            # Local development: replace with your path
             credentials = service_account.Credentials.from_service_account_file('/Users/trimark/Desktop/Jupyter_Notebooks/trimark-tdp-87c89fbd0816.json')
         
         client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
