@@ -17,14 +17,12 @@ PROJECT_ID = "trimark-tdp"
 def init_bigquery_client():
     """Initialize BigQuery client with service account credentials"""
     try:
-        # Try to get credentials from Streamlit secrets (for deployment)
         if hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
             credentials = service_account.Credentials.from_service_account_info(
                 st.secrets["gcp_service_account"]
             )
         else:
-            # For local development, use the JSON file
-            # Make sure to set GOOGLE_APPLICATION_CREDENTIALS environment variable
+            # Local development: replace with your path
             credentials = service_account.Credentials.from_service_account_file('/Users/trimark/Desktop/Jupyter_Notebooks/trimark-tdp-87c89fbd0816.json')
         
         client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
@@ -40,34 +38,33 @@ tables = {
     "All Leads": "trimark-tdp.master.all_leads"
 }
 
-selected_table = st.selectbox("Select a BigQuery Table", list(tables.keys()))
+# Table selectbox with unique key
+selected_table = st.selectbox(
+    "Select a BigQuery Table", 
+    list(tables.keys()), 
+    key="table_select"
+)
 table_path = tables[selected_table]
 
-# --- DATE FILTERING ---
-start_date = st.date_input("Start Date", datetime(2024, 1, 1))
-end_date = st.date_input("End Date", datetime.today())
+# Date inputs with keys
+start_date = st.date_input("Start Date", datetime(2024, 1, 1), key="start_date")
+end_date = st.date_input("End Date", datetime.today(), key="end_date")
 
-# --- CLIENT FILTERING ---
-tables = {
-    "All Paid Media": "trimark-tdp.master.all_paidmedia",
-    "All GA4": "trimark-tdp.master.all_ga4",
-    "All Leads": "trimark-tdp.master.all_leads"
-}
-
-selected_table = st.selectbox("Select a BigQuery Table", list(tables.keys()))
-table_path = tables[selected_table]
-
-# Initialize BigQuery client here
+# Initialize client once
 client = init_bigquery_client()
 if client is None:
     st.stop()
 
-# --- CLIENT FILTERING ---
+# Fetch clients for client selectbox
 client_query = f"SELECT DISTINCT client FROM `{table_path}` WHERE client IS NOT NULL"
 try:
     clients_df = client.query(client_query).to_dataframe()
     clients = sorted(clients_df["client"].dropna().unique())
-    selected_client = st.selectbox("Select a Client", clients)
+    selected_client = st.selectbox(
+        "Select a Client", 
+        clients, 
+        key="client_select"
+    )
 except Exception as e:
     st.error(f"Could not fetch clients: {e}")
     clients = []
@@ -101,16 +98,16 @@ if st.button("Run Query and Download"):
 
 # --- UPLOAD TO BIGQUERY ---
 st.header("⬆️ Upload CSV to BigQuery")
-uploaded_file = st.file_uploader("Upload CSV", type="csv")
+uploaded_file = st.file_uploader("Upload CSV", type="csv", key="file_uploader")
 
 if uploaded_file is not None:
     df_upload = pd.read_csv(uploaded_file)
     st.dataframe(df_upload)
 
-    dataset_id = st.text_input("Dataset ID", "master")
-    table_id = st.text_input("Table Name", "your_table_name")
+    dataset_id = st.text_input("Dataset ID", "master", key="dataset_id")
+    table_id = st.text_input("Table Name", "your_table_name", key="table_id")
 
-    if st.button("Upload to BigQuery"):
+    if st.button("Upload to BigQuery", key="upload_button"):
         table_ref = f"{client.project}.{dataset_id}.{table_id}"
         try:
             job = client.load_table_from_dataframe(df_upload, table_ref)
