@@ -3,6 +3,7 @@ import pandas as pd
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from datetime import datetime
+import re
 
 # --- CONFIG ---
 st.set_page_config(page_title="The Port", page_icon=":ocean:", layout="wide")
@@ -133,6 +134,15 @@ uploaded_file = st.file_uploader("Upload CSV", type="csv", key="file_uploader")
 
 if uploaded_file is not None:
     df_upload = pd.read_csv(uploaded_file)
+    def clean_column_name(column_name):
+        # Replace spaces with underscores
+        column_name = column_name.replace(' ', '_')
+        # Remove parentheses, periods, and other random characters
+        column_name = re.sub(r'[^\w\s]', '', column_name)
+        return column_name
+
+    # Clean the column names
+    df_upload.columns = [clean_column_name(col) for col in df_upload.columns]
     st.dataframe(df_upload)
 
     st.subheader("Upload Settings")
