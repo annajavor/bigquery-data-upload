@@ -25,7 +25,7 @@ def login():
             password_input == st.secrets["app_password"]
         ):
             st.session_state.logged_in = True
-            st.experimental_rerun()  # refresh page after login
+            st.rerun()  # refresh page after login
         else:
             st.error("Incorrect username or password")
 
