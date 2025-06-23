@@ -6,8 +6,8 @@ from datetime import datetime
 import re
 
 # --- CONFIG ---
-st.set_page_config(page_title="The Port", page_icon=":ocean:", layout="wide")
-st.title(":ocean: The Port")
+st.set_page_config(page_title="The Port", page_icon=":anchor:", layout="wide")
+st.title(":anchor: The Port")
 st.header(":arrow_down: Download CSV Export from BigQuery")
 st.info(
     """Use this tool to download data from BigQuery by selecting one of the available tables. 
@@ -19,7 +19,7 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 def login():
-    st.title("🔐 Login")
+    st.title("Login")
     username_input = st.text_input("Username")
     password_input = st.text_input("Password", type="password")
     
