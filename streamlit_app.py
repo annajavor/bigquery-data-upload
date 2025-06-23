@@ -11,25 +11,28 @@ st.info(
     "Use this tool to download data from BigQuery for analysis or reference, or to upload data for storage and processing."
 )
 
-def login():
-    st.title("🔐 Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    
-    # Replace with a real secure check in production
-    if st.button("Login"):
-        if username == "admin" and password == st.secrets["app_password"]:
-            st.session_state.logged_in = True
-        else:
-            st.error("Incorrect username or password")
-
-# Check if user is logged in
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+
+def login():
+    st.title("🔐 Login")
+    username_input = st.text_input("Username")
+    password_input = st.text_input("Password", type="password")
+    
+    if st.button("Login"):
+        if (
+            username_input == st.secrets["username"] and 
+            password_input == st.secrets["app_password"]
+        ):
+            st.session_state.logged_in = True
+            st.experimental_rerun()  # refresh page after login
+        else:
+            st.error("Incorrect username or password")
 
 if not st.session_state.logged_in:
     login()
     st.stop()
+
 
 
 # --- CONSTANTS ---
