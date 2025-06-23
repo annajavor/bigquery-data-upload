@@ -12,6 +12,11 @@ st.title(":anchor: The Port")
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
+if not st.session_state.logged_in:
+    st.info(
+        "Log in to access The Port — your gateway to uploading data and exploring insights from BigQuery.",
+        icon="ℹ️"
+    )
 def login():
     st.title("Login")
     username_input = st.text_input("Username")
