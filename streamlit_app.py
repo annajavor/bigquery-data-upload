@@ -8,8 +8,11 @@ import re
 # --- CONFIG ---
 st.set_page_config(page_title="The Port", page_icon=":ocean:", layout="wide")
 st.title(":ocean: The Port")
+st.header(":arrow_down: Download CSV Export from BigQuery")
 st.info(
-    "Use this tool to download data from BigQuery for analysis or reference, or to upload data for storage and processing."
+    """Use this tool to download data from BigQuery by selecting one of the available tables. 
+    Choose a dataset, define the date range, and select the client or clients you'd like to retrieve data for.
+    """
 )
 
 if "logged_in" not in st.session_state:
@@ -64,7 +67,7 @@ tables = {
     "All GMB": "trimark-tdp.master.all_gmb"
 }
 
-# Table selectbox with unique key
+# Table selectbox
 selected_table = st.selectbox(
     "Select a BigQuery Table", 
     list(tables.keys()), 
@@ -78,42 +81,41 @@ if selected_table in ["All Leads", "All Form Leads"]:
 else:
     client_col = "client_name"
 
-# Date inputs with keys
+# Date inputs
 start_date = st.date_input("Start Date", datetime(2024, 1, 1), key="start_date")
 end_date = st.date_input("End Date", datetime.today(), key="end_date")
 
-# Initialize client once
+# Initialize BigQuery client
 client = init_bigquery_client()
 if client is None:
     st.stop()
 
-# Fetch clients for client selectbox using dynamic column name
+# Fetch unique clients
 client_query = f"SELECT DISTINCT {client_col} FROM `{table_path}` WHERE {client_col} IS NOT NULL"
 try:
     clients_df = client.query(client_query).to_dataframe()
     clients = sorted(clients_df[client_col].dropna().unique())
-    selected_client = st.selectbox(
-        "Select a Client", 
+    selected_clients = st.multiselect(
+        "Select one or more Clients", 
         clients, 
-        key="client_select"
+        key="client_multiselect"
     )
 except Exception as e:
     st.error(f"Could not fetch clients: {e}")
-    clients = []
-    selected_client = None
+    selected_clients = []
 
 # --- QUERY & DOWNLOAD ---
 if st.button("Run Query and Download"):
-    if selected_client:
+    if selected_clients:
         query = f"""
             SELECT *
             FROM `{table_path}`
-            WHERE {client_col} = @client
+            WHERE {client_col} IN UNNEST(@clients)
               AND DATE(date) BETWEEN @start_date AND @end_date
         """
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
-                bigquery.ScalarQueryParameter("client", "STRING", selected_client),
+                bigquery.ArrayQueryParameter("clients", "STRING", selected_clients),
                 bigquery.ScalarQueryParameter("start_date", "DATE", start_date),
                 bigquery.ScalarQueryParameter("end_date", "DATE", end_date),
             ]
@@ -126,36 +128,58 @@ if st.button("Run Query and Download"):
         except Exception as e:
             st.error(f"❌ Query failed: {e}")
     else:
-        st.warning("Please select a valid client.")
+        st.warning("Please select at least one client.")
 
 # --- UPLOAD TO BIGQUERY ---
+import re
+from google.cloud import bigquery
+
+# --- Upload Section ---
 st.header("⬆️ Upload CSV to BigQuery")
+st.info(
+    """Use this tool to upload CSV data to BigQuery. 
+    Click 'Browse files' to select your file, then choose whether to create a new table, append to an existing one, or replace an existing table. 
+    If creating a new table, enter a name using lowercase letters and underscores (e.g., your_table_name)."""
+)
+
 uploaded_file = st.file_uploader("Upload CSV", type="csv", key="file_uploader")
 
 if uploaded_file is not None:
     df_upload = pd.read_csv(uploaded_file)
+
     def clean_column_name(column_name):
-        # Replace spaces with underscores
         column_name = column_name.replace(' ', '_')
-        # Remove parentheses, periods, and other random characters
         column_name = re.sub(r'[^\w\s]', '', column_name)
         return column_name
 
-    # Clean the column names
     df_upload.columns = [clean_column_name(col) for col in df_upload.columns]
     st.dataframe(df_upload)
 
     st.subheader("Upload Settings")
-    
-    dataset_id = "sftp_uploads"  # Fixed dataset
-    table_id = st.text_input("Table Name (file_name)", "your_table_name", key="table_id")
 
+    dataset_id = "sftp_uploads"
+    
     write_disposition = st.selectbox(
         "Choose upload mode",
         options=["Create new table", "Append to existing table", "Replace existing table"]
     )
 
-    # Map selection to BigQuery write disposition
+    # Fetch existing tables
+    existing_tables = []
+    try:
+        dataset_ref = bigquery.DatasetReference(client.project, dataset_id)
+        tables_list = client.list_tables(dataset_ref)
+        existing_tables = [table.table_id for table in tables_list]
+    except Exception as e:
+        st.warning(f"⚠️ Could not fetch existing tables: {e}")
+
+    # Logic based on selected upload mode
+    if write_disposition == "Create new table":
+        table_id = st.text_input("New Table Name (lowercase_with_underscores)", "your_table_name", key="new_table")
+    else:
+        table_id = st.selectbox("Select Existing Table", existing_tables, key="existing_table")
+
+    # Map write disposition for BigQuery
     disposition_map = {
         "Create new table": "WRITE_EMPTY",
         "Append to existing table": "WRITE_APPEND",
@@ -172,4 +196,5 @@ if uploaded_file is not None:
             st.success(f"✅ Uploaded to `{table_ref}` using mode: {write_disposition}")
         except Exception as e:
             st.error(f"❌ Upload failed: {e}")
+
 
