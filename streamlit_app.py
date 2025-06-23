@@ -8,12 +8,6 @@ import re
 # --- CONFIG ---
 st.set_page_config(page_title="The Port", page_icon=":anchor:", layout="wide")
 st.title(":anchor: The Port")
-st.header(":arrow_down: Download CSV Export from BigQuery")
-st.info(
-    """Use this tool to download data from BigQuery by selecting one of the available tables. 
-    Choose a dataset, define the date range, and select the client or clients you'd like to retrieve data for.
-    """
-)
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -57,6 +51,13 @@ def init_bigquery_client():
     except Exception as e:
         st.error(f"Error initializing BigQuery client: {str(e)}")
         return None
+
+st.header(":arrow_down: Download CSV Export from BigQuery")
+st.info(
+    """Use this tool to download data from BigQuery by selecting one of the available tables. 
+    Choose a dataset, define the date range, and select the client or clients you'd like to retrieve data for.
+    """
+)
 
 # --- TABLE OPTIONS ---
 tables = {
