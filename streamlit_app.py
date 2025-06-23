@@ -33,8 +33,6 @@ if not st.session_state.logged_in:
     login()
     st.stop()
 
-
-
 # --- CONSTANTS ---
 PROJECT_ID = "trimark-tdp"
 
@@ -60,7 +58,9 @@ def init_bigquery_client():
 tables = {
     "All Paid Media": "trimark-tdp.master.all_paidmedia",
     "All GA4": "trimark-tdp.master.all_ga4",
-    "All Leads": "trimark-tdp.master.all_leads"
+    "All Leads": "trimark-tdp.master.all_leads",
+    "All Form Leads": "trimark-tdp.master.all_form_table",
+    "All GMB": "trimark-tdp.master.all_gmb"
 }
 
 # Table selectbox with unique key
@@ -72,7 +72,7 @@ selected_table = st.selectbox(
 table_path = tables[selected_table]
 
 # Dynamically set client column based on selected table
-if selected_table == "All Leads":
+if selected_table in ["All Leads", "All Form Leads"]:
     client_col = "Client_Name"
 else:
     client_col = "client_name"
@@ -135,14 +135,31 @@ if uploaded_file is not None:
     df_upload = pd.read_csv(uploaded_file)
     st.dataframe(df_upload)
 
-    dataset_id = st.text_input("Dataset ID", "master", key="dataset_id")
-    table_id = st.text_input("Table Name", "your_table_name", key="table_id")
+    st.subheader("Upload Settings")
+    
+    dataset_id = "sftp_uploads"  # Fixed dataset
+    table_id = st.text_input("Table Name (file_name)", "your_table_name", key="table_id")
+
+    write_disposition = st.selectbox(
+        "Choose upload mode",
+        options=["Create new table", "Append to existing table", "Replace existing table"]
+    )
+
+    # Map selection to BigQuery write disposition
+    disposition_map = {
+        "Create new table": "WRITE_EMPTY",
+        "Append to existing table": "WRITE_APPEND",
+        "Replace existing table": "WRITE_TRUNCATE"
+    }
 
     if st.button("Upload to BigQuery", key="upload_button"):
         table_ref = f"{client.project}.{dataset_id}.{table_id}"
+        job_config = bigquery.LoadJobConfig(write_disposition=disposition_map[write_disposition])
+
         try:
-            job = client.load_table_from_dataframe(df_upload, table_ref)
+            job = client.load_table_from_dataframe(df_upload, table_ref, job_config=job_config)
             job.result()
-            st.success(f"✅ Uploaded to {table_ref}")
+            st.success(f"✅ Uploaded to `{table_ref}` using mode: {write_disposition}")
         except Exception as e:
             st.error(f"❌ Upload failed: {e}")
+
